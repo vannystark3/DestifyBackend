@@ -1,7 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import { Server } from 'socket.io';
-import http from 'http';
 import pkg from 'pg';
 const { Pool } = pkg;
 import dotenv from 'dotenv';
@@ -10,13 +8,6 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: '*',
-  },
-});
 
 const { PGHOST, PGDATABASE, PGUSER, PGPASSWORD } = process.env;
 
@@ -32,37 +23,6 @@ const pool = new Pool({
 });
 
 const PORT = process.env.PORT || 8000;
-
-const sessionUsers = {}; 
-
-io.on('connection', (socket) => {
-  console.log('New client connected:', socket.id);
-
-  socket.on('joinSession', ({ sessionId }) => {
-    socket.join(sessionId);
-    if (!sessionUsers[sessionId]) sessionUsers[sessionId] = [];
-    sessionUsers[sessionId].push(socket.id);
-  });
-
-  socket.on('locationUpdate', async ({ userId, latitude, longitude, sessionId }) => {
-    try {
-      await pool.query(
-        'UPDATE users SET Lat = $1, Lon = $2 WHERE userId = $3',
-        [latitude, longitude, userId]
-      );
-      socket.to(sessionId).emit('locationUpdated', { userId, latitude, longitude });
-    } catch (err) {
-      console.error('Error updating location:', err);
-    }
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-    for (const sessionId in sessionUsers) {
-      sessionUsers[sessionId] = sessionUsers[sessionId].filter(id => id !== socket.id);
-    }
-  });
-});
 
 app.get('/getPassword', async (req, res) => {
   const userID = req.query.userID;
@@ -175,7 +135,7 @@ app.delete('/removeSessionUser', async (req, res) => {
     if (result.rowCount > 0) res.json({ message: 'User removed from session successfully!' });
     else res.json({ message: 'Error removing user' });
   } catch (err) {
-    res.status(500).json('Database query failed!');
+    res.status(500).json({ message: 'Database query failed!' });
   }
 });
 
@@ -203,6 +163,6 @@ app.post('/createSession', async (req, res) => {
   }
 });
 
-server.listen(PORT,'0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
 });
