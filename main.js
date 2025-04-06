@@ -186,6 +186,6 @@ io.on("connection", (socket) => {
 });
 
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT}`);
+server.listen(3000, () => {
+  console.log('🚀 Server is running on port 3000');
 });
