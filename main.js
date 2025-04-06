@@ -9,6 +9,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: "*", 
+    methods: ["GET", "POST"],
+  },
+});
+
 const { PGHOST, PGDATABASE, PGUSER, PGPASSWORD } = process.env;
 
 const pool = new Pool({
@@ -162,6 +171,20 @@ app.post('/createSession', async (req, res) => {
     res.status(500).json('Database query failed!');
   }
 });
+
+io.on("connection", (socket) => {
+  console.log("A user connected:", socket.id);
+
+  socket.on("send-alert", () => {
+    console.log("🚨 Alert triggered by:", socket.id);
+    io.emit("broadcast-alert"); 
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
+
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
