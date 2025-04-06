@@ -1,8 +1,11 @@
 import express from 'express';
+import http from 'http';
 import cors from 'cors';
 import pkg from 'pg';
 const { Pool } = pkg;
 import dotenv from 'dotenv';
+import { Server } from 'socket.io';
+
 dotenv.config();
 
 const app = express();
@@ -31,13 +34,13 @@ const pool = new Pool({
   },
 });
 
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 3000;
 
 app.get('/getPassword', async (req, res) => {
   const userID = req.query.userID;
   if (!userID) return res.status(400).json({ message: 'userID is required' });
   try {
-    const result = await pool.query('SELECT pass AS Password FROM users WHERE userId = $1', [userID]);
+    const result = await pool.query('SELECT pass AS password FROM users WHERE userId = $1', [userID]);
     if (result.rows.length > 0) res.json({ password: result.rows[0].password });
     else res.status(404).json({ message: 'User not found' });
   } catch (err) {
@@ -176,8 +179,8 @@ io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
   socket.on("send-alert", () => {
-    console.log("🚨 Alert triggered by:", socket.id);
-    io.emit("broadcast-alert"); 
+    console.log("Alert triggered by:", socket.id);
+    io.emit("broadcast-alert");
   });
 
   socket.on("disconnect", () => {
@@ -185,7 +188,6 @@ io.on("connection", (socket) => {
   });
 });
 
-
-server.listen(3000, () => {
-  console.log('🚀 Server is running on port 3000');
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
